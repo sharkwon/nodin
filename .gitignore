@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-*/
+.env
+**/.env
+!**/.env.example
+*.log
+.DS_Store
+.cache/
+*.pem
+*.key
+*.tsbuildinfo
+# code dumps / scratch
+frontend-code-dump.txt
+nodin-frontend-complete.txt
+screenshot-*.png
