@@ -7,11 +7,12 @@ services:
     runtime: node
     region: oregon
     plan: free
-    # Install both workspaces, build the frontend, keep backend on tsx (no emit).
+    # Install both workspaces (allow build scripts: esbuild/@swc needed by Vite),
+    # build the frontend, keep backend on tsx (no emit).
     buildCommand: >
       corepack enable &&
-      cd frontend && pnpm install && pnpm build &&
-      cd ../backend && pnpm install
+      cd frontend && pnpm install --config.dangerously-allow-all-builds=true && pnpm build &&
+      cd ../backend && pnpm install --config.dangerously-allow-all-builds=true
     # Serve API + built frontend from a single Node process.
     startCommand: cd backend && pnpm exec tsx src/index.ts
     healthCheckPath: /api/health
