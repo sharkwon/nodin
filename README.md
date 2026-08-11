@@ -23,8 +23,9 @@ Built for the Superteam Earn Solana ecosystem challenge.
 
 ## Live Demo
 
-- **Dashboard:** https://attempting-train-dream-fraser.trycloudflare.com
-  *(temporary Cloudflare quick-tunnel to the local instance; URL rotates on restart)*
+- **Dashboard:** https://nodin.onrender.com
+  *(single Render web service — serves the dashboard and the API from one origin;
+  free tier may cold-start for ~30–50s on the first request after idle)*
 - The dashboard degrades gracefully to cached/last-known data if a live source
   is temporarily rate-limited, and clearly flags data state (available / stale /
   unavailable) rather than showing a misleading `$0`.
@@ -137,6 +138,13 @@ pnpm dev
 ```
 
 Open **http://localhost:5173**.
+
+### Deploy (Render, one service)
+
+The repo ships a `render.yaml` blueprint that builds the frontend and serves it
+alongside the API from a single Node web service. In Render:
+**New → Blueprint → connect this repo → Apply**. No manual config needed —
+region, build/start commands, and env vars come from the blueprint.
 
 Optional environment variables (`backend/.env`):
 

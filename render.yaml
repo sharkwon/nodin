@@ -1,0 +1,31 @@
+# Render Blueprint — NODIN
+# One web service that builds the frontend and serves it alongside the API.
+# In Render: New → Blueprint → connect this repo → Apply.
+services:
+  - type: web
+    name: nodin
+    runtime: node
+    region: oregon
+    plan: free
+    # Install both workspaces, build the frontend, keep backend on tsx (no emit).
+    buildCommand: >
+      corepack enable &&
+      cd frontend && pnpm install && pnpm build &&
+      cd ../backend && pnpm install
+    # Serve API + built frontend from a single Node process.
+    startCommand: cd backend && pnpm exec tsx src/index.ts
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PORT
+        value: "3000"
+      - key: API_PREFIX
+        value: /api
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: SOLANA_RPC_URL
+        value: https://api.mainnet-beta.solana.com
+      # Absolute path to the frontend build inside the Render workspace.
+      - key: STATIC_DIR
+        value: /opt/render/project/src/frontend/dist
