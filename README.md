@@ -24,8 +24,9 @@ Built for the Superteam Earn Solana ecosystem challenge.
 ## Live Demo
 
 - **Dashboard:** https://nodin.onrender.com
-  *(single Render web service — serves the dashboard and the API from one origin;
-  free tier may cold-start for ~30–50s on the first request after idle)*
+  *(single Render web service — serves the dashboard and the API from one origin.
+  On the free tier the service sleeps after ~15 min idle, so the first request
+  may take ~30–50s to cold-start; data-heavy endpoints then respond in ~12s.)*
 - The dashboard degrades gracefully to cached/last-known data if a live source
   is temporarily rate-limited, and clearly flags data state (available / stale /
   unavailable) rather than showing a misleading `$0`.
