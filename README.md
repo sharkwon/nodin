@@ -23,7 +23,8 @@ Built for the Superteam Earn Solana ecosystem challenge.
 
 ## Live Demo
 
-- **Dashboard:** `<TUNNEL_URL will be inserted here>`
+- **Dashboard:** https://attempting-train-dream-fraser.trycloudflare.com
+  *(temporary Cloudflare quick-tunnel to the local instance; URL rotates on restart)*
 - The dashboard degrades gracefully to cached/last-known data if a live source
   is temporarily rate-limited, and clearly flags data state (available / stale /
   unavailable) rather than showing a misleading `$0`.
