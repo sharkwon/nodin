@@ -1,4 +1,20 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd backend && pnpm install && pnpm exec tsc -p tsconfig.vercel.json",
+  "outputDirectory": "dist",
+  "devCommand": "cd backend && pnpm dev",
+  "installCommand": "cd backend && pnpm install",
+  "functions": {
+    "src/vercel.ts": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/src/vercel.ts"
+    }
+  ],
   "crons": [
     {
       "path": "/api/report/generate",

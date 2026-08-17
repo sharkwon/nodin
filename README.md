@@ -23,13 +23,8 @@ Built for the Superteam Earn Solana ecosystem challenge.
 
 ## Live Demo
 
-- **Dashboard:** https://nodin.onrender.com
-  *(single Render web service — serves the dashboard and the API from one origin.
-  On the free tier the service sleeps after ~15 min idle, so the first request
-  may take ~30–50s to cold-start; data-heavy endpoints then respond in ~12s.)*
-- The dashboard degrades gracefully to cached/last-known data if a live source
-  is temporarily rate-limited, and clearly flags data state (available / stale /
-  unavailable) rather than showing a misleading `$0`.
+- **Dashboard:** https://nodin-coral.vercel.app/
+  *(Vercel deployment — frontend (static) + backend (serverless functions). Frontend at nodin-coral.vercel.app, backend at separate Vercel project.)*
 
 ---
 
@@ -154,6 +149,12 @@ Optional environment variables (`backend/.env`):
 | `SOLANA_RPC_URL` | Custom / higher-rate-limit RPC endpoint (e.g. Helius). Defaults to public mainnet RPC. |
 | `DUNE_API_KEY` | Enables the Dune Analytics connector (DAA, tx volume). Without it, that section is omitted. |
 | `PORT` | Backend port (default 3000). |
+
+### Deploy (Vercel, two services)
+
+See [`DEPLOY_VERCEL.md`](DEPLOY_VERCEL.md) for step-by-step:
+1. Deploy backend (serverless functions, cron every 5 min)
+2. Deploy frontend (static, rewrites /api to backend)
 
 **Generate a static report** (no frontend needed):
 
