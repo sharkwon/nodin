@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://YOUR_BACKEND_VERCEL_URL/api/$1"
+      "destination": "https://nodin-5ogmigp4n-xyzzss.vercel.app/api/$1"
     },
     {
       "source": "/(.*)",
