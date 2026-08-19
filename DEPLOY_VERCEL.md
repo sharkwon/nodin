@@ -23,7 +23,7 @@
    NODE_VERSION=22
    PORT=3000
    API_PREFIX=/api
-   CORS_ORIGIN=https://YOUR_FRONTEND_VERCEL_URL
+   CORS_ORIGIN=https://nodin-ktrb.vercel.app
    SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
    ```
 
@@ -50,7 +50,7 @@
 3. **Rewrite API to Backend**
    - In `vercel.json` (already configured), replace:
    ```json
-   "destination": "https://YOUR_BACKEND_VERCEL_URL/api/$1"
+   "destination": "https://nodin-5ogmigp4n-xyzzss.vercel.app/api/$1"
    ```
    - Or set via Vercel Dashboard → Settings → Rewrites
 
