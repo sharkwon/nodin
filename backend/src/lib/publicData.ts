@@ -804,21 +804,21 @@ export const solanaNews = {
       try {
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-        const res = await fetch("https://cms.solanafloor.com/items/articles?limit=" + (limit - items.length) + "&sort=-date&fields=id,title,slug,date,excerpt", {
+        const res = await fetch("https://cms.solanafloor.com/items/articles?limit=" + (limit - items.length) + "&sort=-date&fields=id,title,slug,date,image", {
           signal: ctrl.signal,
           headers: { Accept: "application/json", "User-Agent": "insight-agent/1.0" },
         });
         clearTimeout(t);
         if (res.ok) {
-          const data = await res.json() as { data: { id: string; title: string; slug: string; date: string; excerpt?: string }[] };
+          const data = await res.json() as { data: { id: string; title: string; slug: string; date: string; image?: string }[] };
           for (const a of data.data) {
             if (items.length >= limit) break;
             items.push({
               id: "sf-" + a.id,
               title: a.title,
-              summary: a.excerpt || "",
+              summary: "",
               url: "https://solanafloor.com/news/" + a.slug,
-              imageUrl: undefined,
+              imageUrl: a.image ? `https://img.solanafloor.com/unsafe/s-512/plain/https%3A%2F%2Fcms.solanafloor.com%2Fassets%2F${a.image}` : undefined,
               publishedAt: a.date,
             });
           }
