@@ -1,5 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm exec tsc -p tsconfig.vercel.json",
+  "outputDirectory": "dist",
   "functions": {
     "api/index.ts": {
       "maxDuration": 30
@@ -10,6 +12,5 @@
       "source": "/api/(.*)",
       "destination": "/api/index.ts"
     }
-  ],
-  "outputDirectory": "dist"
+  ]
 }
