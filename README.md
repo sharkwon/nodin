@@ -23,8 +23,8 @@ Built for the Superteam Earn Solana ecosystem challenge.
 
 ## Live Demo
 
-- **Dashboard:** https://nodin-coral.vercel.app/
-  *(Vercel deployment — frontend (static) + backend (serverless functions). Frontend at nodin-coral.vercel.app, backend at separate Vercel project.)*
+- **Dashboard:** https://nodin-ktrb.vercel.app/
+  *(Vercel deployment — frontend (static) + backend (serverless functions). Frontend at nodin-ktrb.vercel.app, backend at nodin-5ogmigp4n-xyzzss.vercel.app.)*
 
 ---
 
