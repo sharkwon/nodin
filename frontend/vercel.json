@@ -1,9 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd frontend && pnpm install && pnpm build",
-  "outputDirectory": "frontend/dist",
-  "devCommand": "cd frontend && pnpm dev",
-  "installCommand": "cd frontend && pnpm install",
   "rewrites": [
     {
       "source": "/api/(.*)",
