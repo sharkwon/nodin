@@ -13,11 +13,15 @@ import {
   solanaMarketData,
   type RssNewsItem,
 } from "./publicData.js";
+import { SolanaFloorConnector } from "./connectors/solanafloor-connector.js";
 import { STATIC_PROTOCOLS } from "./staticData.js";
 import { enhanceNewsWithEntities } from "./ecosystem-activation.js";
 import type { Snapshot, NewsItem, TweetItem, UpgradesSummary } from "./types.js";
 
 const LAMPORTS = 1_000_000_000;
+
+// SolanaFloor connector — fallback news feed (solana.com RSS often unreachable)
+const solanaFloor = new SolanaFloorConnector();
 
 // Curated list of notable Solana protocols (DeFiLlama slugs) for project intelligence.
 const FEATURED = [
@@ -60,18 +64,41 @@ function categorizeNews(text: string): NewsItem["category"] {
 
 async function buildNews(): Promise<{ news: NewsItem[]; sourceOk: boolean }> {
   const rss = await solanaNews.latest(10);
-  if (!rss.length) return { news: [], sourceOk: false };
-  const news: NewsItem[] = rss.map((r: RssNewsItem) => ({
-    id: r.id,
-    title: r.title,
-    summary: r.summary,
-    url: r.url,
-    imageUrl: r.imageUrl,
-    source: "Solana Foundation",
-    publishedAt: r.publishedAt,
-    category: categorizeNews(r.title + " " + r.summary),
-  }));
-  return { news, sourceOk: true };
+  if (rss.length) {
+    const news: NewsItem[] = rss.map((r: RssNewsItem) => ({
+      id: r.id,
+      title: r.title,
+      summary: r.summary,
+      url: r.url,
+      imageUrl: r.imageUrl,
+      source: "Solana Foundation",
+      publishedAt: r.publishedAt,
+      category: categorizeNews(r.title + " " + r.summary),
+    }));
+    return { news, sourceOk: true };
+  }
+
+  // Fallback: SolanaFloor news (solana.com RSS unreachable in serverless)
+  try {
+    const floor = await solanaFloor.fetchData();
+    if (floor.news.length) {
+      const news: NewsItem[] = floor.news.map((n) => ({
+        id: `floor-${n.url}`,
+        title: n.title,
+        summary: n.snippet,
+        url: n.url,
+        imageUrl: (n as { imageUrl?: string }).imageUrl,
+        source: n.source,
+        publishedAt: n.publishedAt ?? new Date().toISOString(),
+        category: categorizeNews(n.title + " " + n.snippet),
+      }));
+      return { news, sourceOk: true };
+    }
+  } catch {
+    /* fall through */
+  }
+
+  return { news: [], sourceOk: false };
 }
 
 async function buildTweets(): Promise<TweetItem[]> {

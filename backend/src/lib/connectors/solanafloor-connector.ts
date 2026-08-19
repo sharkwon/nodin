@@ -1,19 +1,8 @@
-/**
- * SolanaFloor Scraper — news + ETF flow data
- *
- * Scrapes solanafloor.com for:
- * - Solana news articles (title, snippet, timestamp, link)
- * - ETF flow data (daily inflow/outflow, cumulative)
- * - Market metrics (market cap, dominance)
- *
- * Since SolanaFloor is a Next.js SPA, tries __NEXT_DATA__ first,
- * falls back to Playwright headless rendering if needed.
- * Cache: 5 min TTL to avoid spamming.
- */
 import { BaseConnector } from "../source-registry.js";
 import type { SourceHealthCheck } from "../ecosystem-types.js";
 
 const SOLANAFLOOR_URL = "https://solanafloor.com";
+const SOLANAFLOOR_NEWS_URL = "https://solanafloor.com/news";
 const SOLANAFLOOR_ETF_URL = "https://solanafloor.com/etf-tracker";
 
 export interface SolanaFloorNewsItem {
@@ -22,6 +11,7 @@ export interface SolanaFloorNewsItem {
   url: string;
   publishedAt: string | null;
   source: "SolanaFloor";
+  imageUrl?: string;
 }
 
 export interface SolanaFloorEtfData {
@@ -67,7 +57,7 @@ export class SolanaFloorConnector extends BaseConnector {
     const data: SolanaFloorData = {
       news,
       etf,
-      marketMetrics: null, // Extracted from same pages
+      marketMetrics: null,
       timestamp,
     };
 
@@ -96,15 +86,68 @@ export class SolanaFloorConnector extends BaseConnector {
   }
 
   private async fetchNews(): Promise<SolanaFloorNewsItem[]> {
+    // Try /news page first — has article cards with images
+    const newsHtml = await this.fetchRawHtml(SOLANAFLOOR_NEWS_URL);
+    if (newsHtml) {
+      const items = this.parseNewsPage(newsHtml);
+      if (items.length > 0) return items;
+    }
+
+    // Fallback: homepage
     const html = await this.fetchRawHtml(SOLANAFLOOR_URL);
     if (!html) return [];
 
-    // Try __NEXT_DATA__ first
     const items = this.parseNextDataNews(html);
     if (items.length > 0) return items;
 
-    // Fallback: parse HTML directly for article cards
     return this.parseHtmlNews(html);
+  }
+
+  /**
+   * Parse the /news page — SolanaFloor Next.js RSC renders article cards
+   * with <article class="article-card"> containing <img>, <h2>, <p>.
+   */
+  private parseNewsPage(html: string): SolanaFloorNewsItem[] {
+    const items: SolanaFloorNewsItem[] = [];
+
+    // Match article-card blocks
+    const cardRegex =
+      /<article[^>]*class="[^"]*article-card[^"]*"[\s\S]*?<\/article>/gi;
+    let cardMatch: RegExpExecArray | null;
+    while ((cardMatch = cardRegex.exec(html)) !== null) {
+      const block = cardMatch[0];
+
+      // Title & URL
+      const titleMatch = block.match(
+        /<h2[^>]*class="[^"]*article-card__title[^"]*">[\s\S]*?<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/i,
+      );
+      const url = titleMatch?.[1] ?? "";
+      const title = titleMatch?.[2]?.replace(/<[^>]+>/g, "").trim() ?? "";
+      if (!url || !title) continue;
+
+      // Description
+      const descMatch = block.match(
+        /<p[^>]*class="[^"]*article-card__description[^"]*">([\s\S]*?)<\/p>/i,
+      );
+      const snippet = descMatch?.[1]?.replace(/<[^>]+>/g, "").trim() ?? "";
+
+      // Image
+      const imgMatch = block.match(
+        /<img[^>]*src="([^"]*)"[^>]*\/?>/i,
+      );
+      const imageUrl = imgMatch?.[1] ?? undefined;
+
+      items.push({
+        title,
+        snippet,
+        url: url.startsWith("http") ? url : `${SOLANAFLOOR_URL}${url}`,
+        publishedAt: null,
+        source: "SolanaFloor",
+        imageUrl,
+      });
+    }
+
+    return items.slice(0, 20);
   }
 
   private parseNextDataNews(html: string): SolanaFloorNewsItem[] {
@@ -118,7 +161,6 @@ export class SolanaFloorConnector extends BaseConnector {
       const pageProps = json?.props?.pageProps;
       if (!pageProps) return [];
 
-      // Navigate possible paths to news/articles array
       const articlesPath =
         pageProps.articles ||
         pageProps.news ||
@@ -137,6 +179,7 @@ export class SolanaFloorConnector extends BaseConnector {
           : "",
         publishedAt: item.publishedAt || item.date || item.createdAt || null,
         source: "SolanaFloor" as const,
+        imageUrl: item.imageUrl || item.thumbnail || item.image || undefined,
       }));
     } catch {
       return [];
@@ -146,8 +189,6 @@ export class SolanaFloorConnector extends BaseConnector {
   private parseHtmlNews(html: string): SolanaFloorNewsItem[] {
     const items: SolanaFloorNewsItem[] = [];
 
-    // Match article links and titles — common patterns
-    // Pattern: <a href="/news/..."><h2/3>Title</h2/3>
     const articleRegex =
       /<a[^>]*href="(\/news\/[^"]*)"[^>]*>[\s\S]*?<h[23][^>]*>(.*?)<\/h[23]>/gi;
     let match: RegExpExecArray | null;
@@ -160,12 +201,11 @@ export class SolanaFloorConnector extends BaseConnector {
           snippet: "",
           url: url.startsWith("http") ? url : `${SOLANAFLOOR_URL}${url}`,
           publishedAt: null,
-          source: "SolanaFloor" as const,
+          source: "SolanaFloor",
         });
       }
     }
 
-    // Deduplicate
     const seen = new Set<string>();
     return items.filter((item) => {
       if (seen.has(item.url)) return false;
@@ -181,17 +221,12 @@ export class SolanaFloorConnector extends BaseConnector {
     const timestamp = new Date().toISOString();
 
     // ── 1. Parse ETF table (server-rendered HTML tables) ──
-    // Table 0: Individual ETF holdings (BSOL, GSOL, etc.)
-    // Table 1: Daily net flow history
-    // Columns in table 0: Name | Staking | Holdings | Daily Flow | (other)
     const tableMatch = html.match(/<table[^>]*>([\s\S]*?)<\/table>/);
     if (tableMatch) {
       const cells = this.extractTableCells(tableMatch[1]);
-      // Sum holdings from column index 2 (0-indexed): "$594.45M", "$96.81M", etc.
       let totalHoldings = 0;
       let dailyFlowSum = 0;
       let found = false;
-      // Each row = 6 cells: name_block, staking, holdings, daily_flow, ...
       for (let i = 0; i + 2 < cells.length; i += 6) {
         const holdingsText = cells[i + 2] || "";
         const flowText = cells[i + 3] || "";
@@ -202,7 +237,6 @@ export class SolanaFloorConnector extends BaseConnector {
       }
 
       if (found) {
-        // Also try to extract cumulative from RSC chunks
         const cumulative = this.extractCumulativeFromRsc(html);
         return {
           dailyFlow: dailyFlowSum !== 0 ? dailyFlowSum : null,
@@ -248,12 +282,13 @@ export class SolanaFloorConnector extends BaseConnector {
     return null;
   }
 
+  // ── Helper methods ──
+
   private extractTableCells(tableHtml: string): string[] {
     const cells: string[] = [];
     const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
     let match: RegExpExecArray | null;
     while ((match = cellRegex.exec(tableHtml)) !== null) {
-      // Strip HTML tags, get text content
       const text = match[1].replace(/<[^>]+>/g, "").trim();
       cells.push(text);
     }
@@ -261,7 +296,6 @@ export class SolanaFloorConnector extends BaseConnector {
   }
 
   private parseDollar(text: string): number | null {
-    // Match patterns like "$594.45M", "$0", "$897.52M", "-$5.2B"
     const m = text.match(/\$?(-?[\d,.]+)\s*([BMK])?/i);
     if (!m) return null;
     const num = parseFloat(m[1].replace(/,/g, ""));
@@ -271,8 +305,6 @@ export class SolanaFloorConnector extends BaseConnector {
   }
 
   private extractCumulativeFromRsc(html: string): number | null {
-    // RSC chunks contain: {"date":"2026-08-07","net_flow_value":0}
-    // Sum all net_flow_value entries
     const flowRegex = /"net_flow_value"\s*:\s*(-?[\d.]+)/g;
     let sum = 0;
     let found = false;
@@ -297,30 +329,20 @@ export class SolanaFloorConnector extends BaseConnector {
 
   private convertUnit(num: number, unit: string): number {
     switch (unit) {
-      case "B":
-        return num * 1e9;
-      case "M":
-        return num * 1e6;
-      case "K":
-        return num * 1e3;
-      default:
-        return num;
+      case "B": return num * 1e9;
+      case "M": return num * 1e6;
+      case "K": return num * 1e3;
+      default: return num;
     }
   }
 
-  protected async fetchCapability(
-    capability: string,
-  ): Promise<unknown> {
+  protected async fetchCapability(capability: string): Promise<unknown> {
     const data = await this.fetchData();
     switch (capability) {
-      case "news":
-        return data.news;
-      case "etf_flow":
-        return data.etf;
-      case "market_metrics":
-        return data.marketMetrics;
-      default:
-        return null;
+      case "news": return data.news;
+      case "etf_flow": return data.etf;
+      case "market_metrics": return data.marketMetrics;
+      default: return null;
     }
   }
 
