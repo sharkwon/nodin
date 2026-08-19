@@ -14,11 +14,5 @@
       "source": "/api/(.*)",
       "destination": "/src/vercel.ts"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/report/generate",
-      "schedule": "*/5 * * * *"
-    }
   ]
 }

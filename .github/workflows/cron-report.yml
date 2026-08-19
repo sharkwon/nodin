@@ -1,0 +1,17 @@
+name: Cron — Generate Report
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # biar bisa manual trigger dari GitHub UI
+
+jobs:
+  trigger-report:
+    name: Trigger Report Generation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Report
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            "https://${{ secrets.BACKEND_URL }}/api/report/markdown" \
+            -H "User-Agent: nodin-cron/1.0"
